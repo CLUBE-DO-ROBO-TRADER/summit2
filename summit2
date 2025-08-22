@@ -1,0 +1,59 @@
+/////////////////////////////////////////////////////////////////////////////
+//                              *ROBÔ TRADER*                              //
+//                      CANAL DE KELTNER - DIRECIONAL                      //
+//                         by CLUBE DO ROBÔ TRADER                         //
+//                       www.youtube.com/@clubedorobo                      //
+//                      www.instagram.com/danilo.profit                    //
+//                  CONNECT: https://rebrand.ly/cdr_connect                //
+/////////////////////////////////////////////////////////////////////////////
+
+PARAMETRO
+  vDesvio(2.00);                         
+  vPeriodo(20);
+  Alvo(500.0);
+  Stop(350.0);
+
+VAR
+  kSup, kInf, pAlvo, pStop : real;
+  sinalC, sinalV : booleano;
+
+INICIO
+  //RECEBER INDICADORES
+  kSup := KeltnerCh(vDesvio,vPeriodo,1)|0|;
+  kInf := KeltnerCh(vDesvio,vPeriodo,1)|1|;
+
+  //DEFINIR SINAIS DE ENTRADA
+  sinalC := (fechamento > kSup) e (fechamento[1] > kSup[1]) e (fechamento[2] > kSup[2]);
+  sinalV := (fechamento < kInf) e (fechamento[1] < kInf[1]) e (fechamento[2] < kInf[2]);
+             
+  //EXECUTAR ENTRADA
+  se (not HasPosition) e sinalC entao BuyLimit(minima)
+  senao se (not HasPosition) e sinalV entao SellShortLimit(maxima);
+
+  //EXECUÇÃO DE SAÍDA
+  se (IsBought) entao
+  inicio
+    pAlvo := BuyPrice + Alvo;
+    pStop := BuyPrice - Stop;
+    SellToCoverLimit(pAlvo);
+    SellToCoverStop(pStop,pStop - (30 * MinPriceIncrement));
+    se (fechamento > pAlvo) ou (fechamento < pStop) entao SellToCoverAtMarket;
+  fim
+  senao 
+  se (IsSold) entao
+  inicio
+    pAlvo := SellPrice - Alvo;
+    pStop := SellPrice + Stop;
+    BuyToCoverLimit(pAlvo);
+    BuyToCoverStop(pStop,pStop + (30 * MinPriceIncrement));
+    se (fechamento < pAlvo) ou (fechamento > pStop) entao BuyToCoverAtMarket;
+  fim;
+
+  //PLOTAGEM
+  plotn(1,kSup);
+  plotn(2,kInf);
+
+  //COLORAÇÃO
+  se sinalC entao PaintBar(clverdelimao)
+  senao se sinalV entao PaintBar(clvermelho);
+FIM; 
